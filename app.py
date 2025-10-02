@@ -87,7 +87,7 @@ def cleanup():
         return f"Ошибка очистки: {e}"
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': #Запуск
     # Создаем папку для шаблонов если её нет
     if not os.path.exists('templates'):
         os.makedirs('templates')
