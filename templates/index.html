@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Парсер Wildberries</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .search-btn {
+            padding: 12px 30px;
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .search-btn:hover {
+            background: #ff3333;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .stats {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .product-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .product-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .product-price {
+            color: #ff4d4d;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            background: #ffe6e6;
+            color: #d00;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #e6ffe6;
+            color: #008000;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Парсер товаров Wildberries</h1>
+        <p>Введите интересующий товар для поиска и экспорта в Excel</p>
+
+        <form class="search-form" onsubmit="searchProducts(event)">
+            <input type="text" class="search-input" id="query"
+                   placeholder="Например: смартфон, ноутбук, наушники..." required>
+            <button type="submit" class="search-btn">Поиск</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>🔄 Идет поиск товаров... Пожалуйста, подождите.</p>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function searchProducts(event) {
+            event.preventDefault();
+
+            const query = document.getElementById('query').value;
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            loading.style.display = 'block';
+            results.innerHTML = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('query', query);
+
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.style.display = 'none';
+
+                if (data.error) {
+                    results.innerHTML = `<div class="error">${data.error}</div>`;
+                } else if (data.success) {
+                    displayResults(data);
+                }
+
+            } catch (error) {
+                loading.style.display = 'none';
+                results.innerHTML = `<div class="error">Ошибка соединения: ${error}</div>`;
+            }
+        }
+
+        function displayResults(data) {
+            const { products, stats } = data;
+
+            let html = `
+                <div class="success">
+                    ✅ Найдено товаров: ${stats.total_products}<br>
+                    💰 Цены: от ${stats.min_price} до ${stats.max_price} руб. (средняя: ${stats.avg_price} руб.)<br>
+                    📊 Файл сохранен: ${stats.filename}
+                </div>
+
+                <div class="stats">
+                    <h3>Статистика поиска:</h3>
+                    <p>Всего товаров: <strong>${stats.total_products}</strong></p>
+                    <p>Диапазон цен: <strong>${stats.min_price} - ${stats.max_price} руб.</strong></p>
+                    <p>Средняя цена: <strong>${stats.avg_price} руб.</strong></p>
+                </div>
+
+                <h3>Найденные товары (первые 10):</h3>
+            `;
+
+            products.forEach(product => {
+                html += `
+                    <div class="product-card">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-price">${product.price} руб.</div>
+                        ${product.brand ? `<div>Бренд: ${product.brand}</div>` : ''}
+                        ${product.rating ? `<div>Рейтинг: ${product.rating}</div>` : ''}
+                        ${product.reviews_count ? `<div>Отзывов: ${product.reviews_count}</div>` : ''}
+                        ${product.url ? `<div><a href="${product.url}" target="_blank">Ссылка на товар</a></div>` : ''}
+                    </div>
+                `;
+            });
+
+            document.getElementById('results').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
